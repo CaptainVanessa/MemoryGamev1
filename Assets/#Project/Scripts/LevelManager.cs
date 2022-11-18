@@ -1,34 +1,37 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class LevelManager : MonoBehaviour
 {
-    public GameObject cardPrefab;
     public float columns;
     public float lines;
     public float padding;
+    public float timer = 0.5f;
+    public GameObject restartButton;
+    private Material _cardMaterial;
     public Material[] materials;
-    public float timeBeforeUnreveal = 0.5f;
-    private List<Material> potentialMaterials;
-
-    private List<CardBehaviour> cards = new List<CardBehaviour>();
-    private List<CardBehaviour> cardsRevealed = new List<CardBehaviour>();
-    private List<CardBehaviour> cardsMatched = new List<CardBehaviour>();
+    public GameObject cardPrefab;
+    private List<Material> _potentialMaterials;
+    private List<CardBehaviour> _cards = new List<CardBehaviour>();
+    private List<CardBehaviour> _cardsRevealed = new List<CardBehaviour>();
+    private List<CardBehaviour> _cardsMatched = new List<CardBehaviour>();
 
 
     void Start()
     {
+        restartButton.SetActive(false);
         if (lines * columns % 2 != 0) {
-            Debug.LogError("The level needs to have an even number of cards", gameObject); //modulo = reste d'une division entière //on précise le gameObject responsable de l'erreur
+            Debug.LogError("The level needs to have an even number of cards", gameObject);
             return;
         }
 
-        potentialMaterials = new List<Material>();
+        _potentialMaterials = new List<Material>();
 
         for (int i=0; i<materials.Length; i++){
-            potentialMaterials.Add(materials[i]);
-            potentialMaterials.Add(materials[i]);
+            _potentialMaterials.Add(materials[i]);
+            _potentialMaterials.Add(materials[i]);
         }
 
         for (float y = 0; y < padding * columns; y += padding){
@@ -36,56 +39,62 @@ public class LevelManager : MonoBehaviour
                 Vector3 position = new Vector3(x, y, 0f);
                 Quaternion rotation = new Quaternion(270, 0, 0, 270);
                 CreateCard(position, rotation);
-        }
+            }
         }
     }
 
     IEnumerator UnrevealCards(){
-        yield return new WaitForSeconds(timeBeforeUnreveal);
-        for (int i = 0; i < cardsRevealed.Count ; i++){
-            cardsRevealed[i].UnrevealCard();
+        yield return new WaitForSeconds(timer);
+        for (int i = 0; i < _cardsRevealed.Count ; i++){
+            _cardsRevealed[i].UnrevealCard();
         }
-        cardsRevealed.Clear();
+        _cardsRevealed.Clear();
+    }
+
+    public void DestroyCards(){
+        for (int i = 0; i < _cardsRevealed.Count ; i++){
+            _cardsRevealed[i].MatchCard();
+        }
+        _cardsRevealed.Clear();
     }
 
     public void CardRevealed(CardBehaviour card){
-        if (cardsRevealed.Contains(card)) return;
-        if (cardsMatched.Contains(card)) return;
-        if (cardsRevealed.Count >= 2) return;
+        if (_cardsRevealed.Contains(card)) return;
+        if (_cardsMatched.Contains(card)) return;
+        if (_cardsRevealed.Count >= 2) return;
 
         card.RevealCard();
-        cardsRevealed.Add(card);
+        _cardsRevealed.Add(card);
 
-        if(cardsRevealed.Count >= 2){
-            if (cardsRevealed[0].hiddenMaterial == cardsRevealed[1].hiddenMaterial){
+        if(_cardsRevealed.Count >= 2){
+            if (_cardsRevealed[0]._cardMaterial == _cardsRevealed[1]._cardMaterial){
                 Debug.Log("It's a match!");
-                cardsMatched.Add(cardsRevealed[0]);
-                cardsMatched.Add(cardsRevealed[1]);
-                card.MatchCard();
-                cardsRevealed.Clear();
+                _cardsMatched.Add(_cardsRevealed[0]);
+                _cardsMatched.Add(_cardsRevealed[1]);
+                DestroyCards();
+                if(_cardsMatched.Count == _cards.Count){
+                    restartButton.SetActive(true);
+                }       
             }
             else{
+                Debug.Log("It's not a match...");
                 StartCoroutine(UnrevealCards());
             }
         }
     }
 
-    private void CreateCard(Vector3 position, Quaternion rotation){
-        GameObject cardGO = Instantiate(cardPrefab, position, rotation); //Instantiate retourne un objet qu'on stock dans la variable cardGO //si on passe la position, on doit aussi passer la rotation (par défaut : Quaternion.identity)
-        CardBehaviour card = cardGO.GetComponent<CardBehaviour>();
-        cards.Add(card); //le manager se fait connaître du card
-        card.manager = this; //"je suis ton manager"
-
-        int index = Random.Range(0, potentialMaterials.Count);
-        // card.hiddenMaterial = materials[index];
-        card.hiddenMaterial = potentialMaterials[index];
-        potentialMaterials.RemoveAt(index); //ce qui retire celui sélectionné ?
-        // ou potentialMaterials.Remove(potentialMaterials[index]); // ce qui retire la première occurence
-        
+    public void Restart(){
+        Start();
     }
 
-    void Update()
-    {
-        
+    private void CreateCard(Vector3 position, Quaternion rotation){
+        GameObject cardGO = Instantiate(cardPrefab, position, rotation);
+        CardBehaviour card = cardGO.GetComponent<CardBehaviour>();
+        _cards.Add(card);
+        card.manager = this;
+
+        int index = Random.Range(0, _potentialMaterials.Count);
+        card._cardMaterial = _potentialMaterials[index];
+        _potentialMaterials.RemoveAt(index);
     }
 }

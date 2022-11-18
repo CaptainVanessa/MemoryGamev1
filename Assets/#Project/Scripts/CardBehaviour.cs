@@ -2,62 +2,55 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// bugs:
-// doesn't load pairs necessarily
-// only destroys one from the pair
-// doesn't deselect properly? or does at the same time as select
-// deselect animation has wrong rotation
-// to add:
-// sfx
-// replay button
-
 public class CardBehaviour : MonoBehaviour
 {
-    public Material hiddenMaterial;
-    private Material originalMaterial;
+    public Material _cardMaterial;
     public LevelManager manager;
     private Animator animator;
+    public AudioSource source;
+    public AudioClip clipHover;
+    public AudioClip clipSelect;
+    public AudioClip clipDeselect;
+    public AudioClip clipMatch;
 
     void Start()
     {
-        originalMaterial = GetComponent<Renderer>().material; //ou materials[0] si plusieurs dans mesh Renderer
-        animator = GetComponent<Animator>(); //ou materials[0] si plusieurs dans mesh Renderer
+        GetComponent<Renderer>().material = _cardMaterial;
+        animator = GetComponent<Animator>();
     }
 
-    void OnMouseUp(){ //que s'il y a collider
-        // RevealColor();
+    void OnMouseUp(){
         manager.CardRevealed(this);
     }
 
     void OnMouseEnter(){
         animator.SetBool("mouseHovering", true);
+        PlaySound(clipHover);
     }
     void OnMouseExit(){
         animator.SetBool("mouseHovering", false);
     }
         
-    public void RevealCard(){ //mettre en public pour que l'autre y accède, sinon erreur "inaccessible"
-        GetComponent<Renderer>().material = hiddenMaterial;
+    public void RevealCard(){
         animator.SetBool("cardSelected", true);
+        PlaySound(clipSelect);
     }
 
     public void UnrevealCard(){
-        animator.SetBool("cardSelected", true);
-        animator.SetBool("cardDeselect", true);
+        animator.SetBool("cardSelected", false);
+        PlaySound(clipDeselect);
     }
         
     public void MatchCard(){
-        // animator.SetBool("cardSelected", true);
-        // animator.SetBool("cardDeselect", true);
-        Destroy(gameObject); //ne détruit que la dernière de la paire
+        PlaySound(clipMatch);
+        Destroy(gameObject, clipMatch.length);
     }
 
-    // void OnMouseExit(){
-    //     GetComponent<Renderer>().material = originalMaterial;
-    // }
-
-    void Update()
-    {
-        
+    public void PlaySound(AudioClip currentClip){
+        source.clip = currentClip;
+        if(source.isPlaying) return;
+        if(!source.isPlaying){
+            source.Play();
+        }
     }
 }
